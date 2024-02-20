@@ -95,6 +95,56 @@ spec:
                       an S3 bucket. When the workspace's source is 'Inline' the content
                       of a simple main.tf file may be written inline.
                     type: string
+                  overrideFiles:
+                    description: Files with Override terraform code.
+                    items:
+                      description: A OverrideFile is a file containing many Terraform
+                        Override Files. https://developer.hashicorp.com/terraform/language/files/override
+                      properties:
+                        configMapKeyRef:
+                          description: A ConfigMap key containing the vars file.
+                          properties:
+                            key:
+                              description: Key within the referenced resource.
+                              type: string
+                            name:
+                              description: Name of the referenced resource.
+                              type: string
+                            namespace:
+                              description: Namespace of the referenced resource.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          - namespace
+                          type: object
+                        secretKeyRef:
+                          description: A Secret key containing the vars file.
+                          properties:
+                            key:
+                              description: Key within the referenced resource.
+                              type: string
+                            name:
+                              description: Name of the referenced resource.
+                              type: string
+                            namespace:
+                              description: Namespace of the referenced resource.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          - namespace
+                          type: object
+                        source:
+                          description: Source of this vars file.
+                          enum:
+                          - ConfigMapKey
+                          - SecretKey
+                          type: string
+                      required:
+                      - source
+                      type: object
+                    type: array
                   planArgs:
                     description: Arguments to be included in the terraform plan CLI
                       command

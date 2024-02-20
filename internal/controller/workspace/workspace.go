@@ -56,26 +56,28 @@ const (
 	errGetPC        = "cannot get ProviderConfig"
 	errGetCreds     = "cannot get credentials"
 
-	errMkdir           = "cannot make Terraform configuration directory"
-	errRemoteModule    = "cannot get remote Terraform module"
-	errSetGitCredDir   = "cannot set GIT_CRED_DIR environment variable"
-	errWriteCreds      = "cannot write Terraform credentials"
-	errWriteGitCreds   = "cannot write .git-credentials to /tmp dir"
-	errWriteConfig     = "cannot write Terraform configuration " + tfConfig
-	errWriteMain       = "cannot write Terraform configuration " + tfMain
-	errWriteBackend    = "cannot write Terraform configuration " + tfBackendFile
-	errInit            = "cannot initialize Terraform configuration"
-	errWorkspace       = "cannot select Terraform workspace"
-	errResources       = "cannot list Terraform resources"
-	errDiff            = "cannot diff (i.e. plan) Terraform configuration"
-	errOutputs         = "cannot list Terraform outputs"
-	errOptions         = "cannot determine Terraform options"
-	errApply           = "cannot apply Terraform configuration"
-	errDestroy         = "cannot destroy Terraform configuration"
-	errVarFile         = "cannot get tfvars"
-	errVarMap          = "cannot get tfvars from var map"
-	errDeleteWorkspace = "cannot delete Terraform workspace"
-	errChecksum        = "cannot calculate workspace checksum"
+	errMkdir             = "cannot make Terraform configuration directory"
+	errRemoteModule      = "cannot get remote Terraform module"
+	errSetGitCredDir     = "cannot set GIT_CRED_DIR environment variable"
+	errWriteCreds        = "cannot write Terraform credentials"
+	errWriteGitCreds     = "cannot write .git-credentials to /tmp dir"
+	errWriteConfig       = "cannot write Terraform configuration " + tfConfig
+	errWriteMain         = "cannot write Terraform configuration " + tfMain
+	errWriteBackend      = "cannot write Terraform configuration " + tfBackendFile
+	errInit              = "cannot initialize Terraform configuration"
+	errWorkspace         = "cannot select Terraform workspace"
+	errResources         = "cannot list Terraform resources"
+	errDiff              = "cannot diff (i.e. plan) Terraform configuration"
+	errOutputs           = "cannot list Terraform outputs"
+	errOptions           = "cannot determine Terraform options"
+	errApply             = "cannot apply Terraform configuration"
+	errDestroy           = "cannot destroy Terraform configuration"
+	errVarFile           = "cannot get tfvars"
+	errVarMap            = "cannot get tfvars from var map"
+	errDeleteWorkspace   = "cannot delete Terraform workspace"
+	errChecksum          = "cannot calculate workspace checksum"
+	errOverrideFile      = "cannot get override file"
+	errWriteOverrideFile = "cannot write Override File %s"
 
 	gitCredentialsFilename = ".git-credentials"
 )
@@ -247,6 +249,32 @@ func (c *connector) Connect(ctx context.Context, mg resource.Managed) (managed.E
 	case v1beta1.ModuleSourceInline:
 		if err := c.fs.WriteFile(filepath.Join(dir, tfMain), []byte(cr.Spec.ForProvider.Module), 0600); err != nil {
 			return nil, errors.Wrap(err, errWriteMain)
+		}
+	}
+
+	for _, of := range cr.Spec.ForProvider.OverrideFiles {
+		switch of.Source {
+		case v1beta1.VarFileSourceConfigMapKey:
+			cm := &corev1.ConfigMap{}
+			r := of.ConfigMapKeyReference
+			nn := types.NamespacedName{Namespace: r.Namespace, Name: r.Name}
+			if err := c.kube.Get(ctx, nn, cm); err != nil {
+				return nil, errors.Wrap(err, errOverrideFile)
+			}
+			if err := c.fs.WriteFile(filepath.Join(dir, r.Key), []byte(cm.Data[r.Key]), 0600); err != nil {
+				return nil, errors.Wrapf(err, errWriteOverrideFile, r.Key)
+			}
+
+		case v1beta1.VarFileSourceSecretKey:
+			s := &corev1.Secret{}
+			r := of.SecretKeyReference
+			nn := types.NamespacedName{Namespace: r.Namespace, Name: r.Name}
+			if err := c.kube.Get(ctx, nn, s); err != nil {
+				return nil, errors.Wrap(err, errOverrideFile)
+			}
+			if err := c.fs.WriteFile(filepath.Join(dir, r.Key), s.Data[r.Key], 0600); err != nil {
+				return nil, errors.Wrapf(err, errWriteOverrideFile, r.Key)
+			}
 		}
 	}
 

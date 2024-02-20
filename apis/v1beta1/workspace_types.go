@@ -68,6 +68,21 @@ type VarFile struct {
 	SecretKeyReference *KeyReference `json:"secretKeyRef,omitempty"`
 }
 
+// A OverrideFile is a file containing many Terraform Override Files.
+// https://developer.hashicorp.com/terraform/language/files/override
+type OverrideFile struct {
+	// Source of this vars file.
+	Source VarFileSource `json:"source"`
+
+	// A ConfigMap key containing the vars file.
+	// +optional
+	ConfigMapKeyReference *KeyReference `json:"configMapKeyRef,omitempty"`
+
+	// A Secret key containing the vars file.
+	// +optional
+	SecretKeyReference *KeyReference `json:"secretKeyRef,omitempty"`
+}
+
 // A KeyReference references a key within a Secret or a ConfigMap.
 type KeyReference struct {
 	// Namespace of the referenced resource.
@@ -119,6 +134,10 @@ type WorkspaceParameters struct {
 	// precedence.
 	// +optional
 	VarFiles []VarFile `json:"varFiles,omitempty"`
+
+	// Files with Override terraform code.
+	// +optional
+	OverrideFiles []OverrideFile `json:"overrideFiles,omitempty"`
 
 	// Arguments to be included in the terraform init CLI command
 	InitArgs []string `json:"initArgs,omitempty"`
